@@ -1,4 +1,6 @@
+#include <iostream>
 #include "kalman_filter.h"
+#include "tools.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -8,34 +10,64 @@ using Eigen::VectorXd;
  *   VectorXd or MatrixXd objects with zeros upon creation.
  */
 
-KalmanFilter::KalmanFilter() {}
+KalmanFilter::KalmanFilter()
+{
+  I_ = Eigen::MatrixXd::Identity(4, 4);
+}
 
 KalmanFilter::~KalmanFilter() {}
 
 void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
-                        MatrixXd &H_in, MatrixXd &R_in, MatrixXd &Q_in) {
+                        MatrixXd &H_in, MatrixXd &R_in, MatrixXd &Q_in)
+{
   x_ = x_in;
   P_ = P_in;
   F_ = F_in;
   H_ = H_in;
-  R_ = R_in;
   Q_ = Q_in;
 }
 
-void KalmanFilter::Predict() {
-  /**
-   * TODO: predict the state
-   */
+void KalmanFilter::Predict()
+{
+  x_ = F_ * x_; // u is zero vector; omitted for optimization purpose
+  P_ = F_ * P_ * F_.transpose() + Q_;
 }
 
-void KalmanFilter::Update(const VectorXd &z) {
-  /**
-   * TODO: update the state by using Kalman Filter equations
-   */
+void KalmanFilter::Update(const VectorXd &z)
+{
+  VectorXd y = z - H_ * x_;
+
+  UpdateOthers(H_, R_laser_, y);
 }
 
-void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-   * TODO: update the state by using Extended Kalman Filter equations
-   */
+void KalmanFilter::UpdateOthers(const MatrixXd &H, const MatrixXd &R, const VectorXd &y)
+{
+  MatrixXd Ht = H.transpose();
+  MatrixXd S = H * P_ * Ht + R;
+  MatrixXd Si = S.inverse();
+  MatrixXd K = P_ * Ht * Si;
+
+  //update
+  x_ = x_ + (K * y);
+  P_ = (I_ - K * H) * P_;
+}
+
+void print_dim(MatrixXd &mat)
+{
+  std::cout << "rows: " << mat.rows() << " cols: " << mat.cols() << std::endl;
+}
+
+void KalmanFilter::UpdateEKF(const VectorXd &z)
+{
+  MatrixXd Hj = Tools::CalculateJacobian(x_);
+
+  VectorXd y = z - Tools::Hf(x_);
+
+  //normalise angle
+  while (y(1) > M_PI)
+    y(1) -= M_PI;
+  while (y(1) < -M_PI)
+    y(1) += M_PI;
+
+  UpdateOthers(Hj, R_radar_, y);
 }

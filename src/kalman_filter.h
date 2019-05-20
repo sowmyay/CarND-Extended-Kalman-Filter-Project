@@ -46,6 +46,8 @@ class KalmanFilter {
    */
   void UpdateEKF(const Eigen::VectorXd &z);
 
+  void UpdateOthers(const Eigen::MatrixXd &H, const Eigen::MatrixXd &R, const Eigen::VectorXd &y);
+
   // state vector
   Eigen::VectorXd x_;
 
@@ -62,7 +64,12 @@ class KalmanFilter {
   Eigen::MatrixXd H_;
 
   // measurement covariance matrix
-  Eigen::MatrixXd R_;
+  Eigen::MatrixXd R_laser_;
+
+  // measurement covariance matrix
+  Eigen::MatrixXd R_radar_;
+
+  Eigen::MatrixXd I_;
 };
 
 #endif // KALMAN_FILTER_H_
